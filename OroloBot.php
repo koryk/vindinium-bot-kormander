@@ -86,6 +86,12 @@ class AStar
 				$utility +=1/$utility;
 			}
 		}
+		$adjTiles = $this->board->getAdjacentTiles($this->board->loadTile($them));
+		foreach ($adjTiles as $tile)
+			if ($tile->type == Tile::TAVERN) {
+				$utility-=1/($utility+1);
+				break;
+			}
 		return $utility;
 	}
 
@@ -254,13 +260,13 @@ class OroloBot extends Bot
 			}
 		}
 		$closestTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::PLAYER));
-		$closestTavern = AStar::trueDistance($this->findClosestTileType($this->state->board->loadTile($this->state->hero->pos), Tile::TAVERN), $this->state->board->loadTile($this->state->hero->pos),$this->state);
 		foreach ($closestTiles as $them) {
 			$dist = AStar::trueDistance($us, $them, $this->state);
 			$ownAllGold = FALSE;
 			$goldTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::GOLD_OWNED));
 			$goldCount = 0;
 			$myGoldCount = 0;
+			$closestTavern = AStar::trueDistance($this->findClosestTileType($this->state->board->loadTile($them), Tile::TAVERN), $this->state->board->loadTile($them),$this->state);
 			foreach ($goldTiles as $tile) {
 				if ($tile->owner != $them->owner) {
 				} else {
@@ -268,8 +274,10 @@ class OroloBot extends Bot
 				}
 				$goldCount++;
 			}
-			$threshold = ($this->state->hero->life-$this->state->heroes[$them->owner]->life)/20 + 5*($myGoldCount/$goldCount);
-			if ((($dist < $threshold || ($dist == 2 && $closestTavern)) && ($this->state->heroes[$them->owner]->life<=21 || $this->state->hero->life - $this->state->heroes[$them->owner]->life > 19)) || (($this->state->hero->life - $this->state->heroes[$them->owner]->life) >= -20 && $dist==3) && $this->state->heroes[$them->owner]->life <95) {
+			$threshold = ($this->state->hero->life-$this->state->heroes[$them->owner]->life)/20 + 5*($myGoldCount/($goldCount+1));
+			$case_one = (($dist < $threshold || ($dist == 2 && $closestTavern > 2)) && ($this->state->heroes[$them->owner]->life<=21 || $this->state->hero->life - $this->state->heroes[$them->owner]->life > 19));//
+			$case_two = (($this->state->hero->life - $this->state->heroes[$them->owner]->life) >= -19 && $dist==3);
+			if (($case_one || $case_two) && $this->state->heroes[$them->owner]->life <90) {
 				echo "Attacking because Dist is " . $dist . " threshold is" . $threshold . " health is " . $this->state->heroes[$them->owner]->life ."\n";
 				return TRUE;
 			} else {
@@ -396,22 +404,27 @@ class OroloBot extends Bot
 			$tavernTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::TAVERN));
 			$tavernTile = $this->findClosestTileType($this->state->board->loadTile($this->state->hero->pos), array(Tile::TAVERN));
 			$tileWeight = array();
-			foreach ($tavernTile as $tavernKey => $tavern) {
+			foreach ($tavernTiles as $tavernKey => $tavern) {
 				$aStar = new AStar($this->state->board, $this->state->board->loadTile($this->state->hero->pos),$this->state->board->loadTile($tavern));
-				if (count($aStar->path) > 0) {
+				if (count($aStar->path) == 0) {
 					//change it!
 					continue;
 				}
 				$tileWeight[$tavernKey] = count($aStar->path);
 				foreach ($aStar->path as $tile) {
 					foreach ($this->state->board->getAdjacentTiles($tile) as $enemyAdjKey => $nearby) {
-						if ($tile->type == Tile::PLAYER && $tile->owner != $this->state->hero->id) {
-							$tileWeight[$tavernKey] += 2;
+						if ($nearby->type == Tile::PLAYER && $nearby->owner != $this->state->hero->id) {
+							$tileWeight[$tavernKey] += .4;
 						}
 					}
 				}
 			}
-			return $tavernTile;
+			$returnTiles = array();
+			foreach ($tileWeight as $key => $distance) {
+				$returnTiles[$key] = $tavernTiles[$key];
+			}
+			$returnTiles[]=$this->state->board->loadTile($this->state->hero->pos);
+			$closestTile = reset($returnTiles);
 		} else if ($this->currentGoal == "Attack") {
 			//get baddy hp
 			//prioritize 
@@ -422,7 +435,7 @@ class OroloBot extends Bot
 			$dist = AStar::trueDistance($heroTile, $closestTile, $this->state);
 			if ($dist == 2) {
 				foreach ($this->state->board->getAdjacentTiles($heroTile) as $tile) {
-					if ($tile->type == Tile::TAVERN) {
+					if ($tile->type == Tile::TAVERN && $this->state->hero->life < 70) {
 						$closestTile = $tile;
 						break;
 					}
@@ -477,7 +490,7 @@ class OroloBot extends Bot
 			$adjWeight = array();
 			foreach ($closeTiles as $key => $tile) {
 				$adjWeight[$key] = 0;
-				if ($tile->type == Tile::TAVERN) {
+				if ($tile->type == Tile::TAVERN && $this->state->hero->life < 70) {
 					$adjWeight[$key] -= 10;
 				}
 			}
@@ -501,6 +514,12 @@ class OroloBot extends Bot
 				$enemyTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::PLAYER));
 				foreach ($enemyTiles as $enemykey=>$enemyTile) {
 					$dist = AStar::trueDistance($tile,$enemyTile,$this->state);
+					$closeEnemyTiles = $this->state->board->getAdjacentTiles($enemyTile);
+					foreach ($closeEnemyTiles as $closeEnemyKey=>$closeEnemyTile) {
+						if ($closeEnemyTile->type == Tile::TAVERN) {
+							$adjWeight[$key] += 1;
+						}
+					}
 					$adjWeight[$key] += 2/($dist+1);
 				}
 				$tavernTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::TAVERN));
