@@ -63,7 +63,9 @@ class Client
 
             // Move to some direction
             $url = $state['playUrl'];
+            $startTime = microtime(true);
             $direction = $botObject->move($state);
+	    echo "TURN TOOK " . (microtime(true)-$startTime)  . "SECONDS\n";
             $state = $this->move($url, $direction);
         }
         ob_end_clean();
@@ -102,7 +104,10 @@ class Client
          */
 
         try {
+            $startTime = microtime(true);
             $r = HttpPost::post($url, array('dir' => $direction), self::TIMEOUT);
+	    echo "SENDING TOOK " . (microtime(true)-$startTime)  . "SECONDS\n";
+
             if (isset($r['headers']['status_code']) && $r['headers']['status_code'] == 200) {
                 return json_decode($r['content'], true);
             } else {
