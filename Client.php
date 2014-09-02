@@ -88,12 +88,7 @@ class Client
         // Wait for 10 minutes
         $r = HttpPost::post($this->serverUrl . $api_endpoint, $params, 10 * 60);
 
-        if (isset($r['headers']['status_code']) && $r['headers']['status_code'] == 200) {
-            return json_decode($r['content'], true);
-        } else {
-            echo "Error when creating the game\n";
-            echo $r['content'];
-        }
+            return json_decode($r, true);
     }
 
     private function move($url, $direction)
@@ -108,12 +103,7 @@ class Client
             $r = HttpPost::post($url, array('dir' => $direction), self::TIMEOUT);
 	    echo "SENDING TOOK " . (microtime(true)-$startTime)  . "SECONDS\n";
 
-            if (isset($r['headers']['status_code']) && $r['headers']['status_code'] == 200) {
-                return json_decode($r['content'], true);
-            } else {
-                echo "Error HTTP " . $r['headers']['status_code'] . "\n" . $r['content'] . "\n";
-                return array('game' => array('finished' => true));
-            }
+                return json_decode($r, true);
         } catch (\Exception $e) {
             echo $e->getMessage() . "\n";
             return array('game' => array('finished' => true));

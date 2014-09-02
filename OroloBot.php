@@ -361,7 +361,7 @@ class OroloBot extends Bot
 		}
 		if ($this->state->hero->life < $this->healThreshold) {
 			$this->currentGoal = "Heal";
-		} else if ($this->state->hero->life < 80) {
+		} else if ($this->state->hero->life < 78) {
 			if ($distance < 3) {
 				$this->currentGoal = "Heal";
 			}
