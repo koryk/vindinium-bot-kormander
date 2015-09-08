@@ -19,3 +19,7 @@ php starter.php <key> <[training|arena]> <number-of-games-to-play> [server-url]
 php starter.php mySecretKey training 30
 php starter.php mySecretKey arena 1
 
+## Other:
+
+This was a private repo, but it doesn't matter anymore since the contest has died.
+
