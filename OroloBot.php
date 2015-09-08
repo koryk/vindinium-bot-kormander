@@ -26,9 +26,6 @@ class AStar
 		$this->addOpenStep($startPos);
 		$this->pathIndex = 0;
 		$this->path = $this->findPath();
-		//echo "PATH IS";
-		//print_r($this->path);
-		//die();
 	}
 
 	public function findPath() {
@@ -57,7 +54,6 @@ class AStar
 				if (!isset($this->openSet[$neighborIndex]) || (isset($g_score[$neighborIndex]) && $tentativeGScore < $g_score[$neighborIndex])) {
 					if (isset($this->cameFrom[$neighborIndex])) continue;
 					if (($neighbor->type == Tile::OBSTACLE || $neighbor->type == Tile::GOLD || $neighbor->type == Tile::GOLD_OWNED ||  $neighbor->type == Tile::TAVERN || $neighbor->type == Tile::PLAYER) && $goalIndex != $neighborIndex) {
-						//echo "skipping neighbor " . $neighborIndex . "of type" . $neighbor->type;
 						continue;
 					}
 					$this->cameFrom[$neighborIndex] = $current;
@@ -69,7 +65,7 @@ class AStar
 				}
 			}
 		}
-		echo "No route from " . $this->startPos . " to " . $this->goalPos;
+		//echo "No route from " . $this->startPos . " to " . $this->goalPos;
 		return array();
 	}
 
@@ -182,7 +178,7 @@ class AStar
 	}
 }
 
-class OroloBot extends Bot
+class OroloBot
 {
 	public $state = NULL;
 	public $lastMove = "North";
@@ -196,10 +192,10 @@ class OroloBot extends Bot
 	public function move($state)
 	{
 		$this->parseGameState($state);
-		echo $state['viewUrl'] . "\n";
+		//echo $state['viewUrl'] . "\n";
 		//echo $this->state->board . "\n";
 		$move = $this->get_next_move();
-		echo "MOVING $move\n";
+		//echo "MOVING $move\n";
 		return $move;
 	}
 
@@ -228,7 +224,7 @@ class OroloBot extends Bot
 
 	public function interruptGoalForHeal() {
 
-		if ($this->state->hero->life < 90) {
+		if ($this->state->hero->life < 80) {
 			$closestTiles = $this->state->board->getMovableTiles($this->state->board->loadTile($this->state->hero->pos));
 			foreach ($closestTiles as $them) {
 				if ($them->type == Tile::TAVERN) {
@@ -274,14 +270,14 @@ class OroloBot extends Bot
 				}
 				$goldCount++;
 			}
-			$threshold = ($this->state->hero->life-$this->state->heroes[$them->owner]->life)/20 + 5*($myGoldCount/($goldCount+1));
+			$threshold = ($this->state->hero->life-$this->state->heroes[$them->owner]->life)/20 + 3*($myGoldCount/($goldCount+1));
 			$case_one = (($dist < $threshold || ($dist == 2 && $closestTavern > 2)) && ($this->state->heroes[$them->owner]->life<=21 || $this->state->hero->life - $this->state->heroes[$them->owner]->life > 19));//
 			$case_two = (($this->state->hero->life - $this->state->heroes[$them->owner]->life) >= -19 && $dist==3);
-			if (($case_one || $case_two) && $this->state->heroes[$them->owner]->life <90) {
-				echo "Attacking because Dist is " . $dist . " threshold is" . $threshold . " health is " . $this->state->heroes[$them->owner]->life ."\n";
+			if (($case_one || $case_two) && $this->state->heroes[$them->owner]->life <89) {
+				//echo "Attacking because Dist is " . $dist . " threshold is" . $threshold . " health is " . $this->state->heroes[$them->owner]->life ."\n";
 				return TRUE;
 			} else {
-				echo "Not interrupting for attacking \n";
+				//echo "Not interrupting for attacking \n";
 			}
 		}
 		return FALSE;
@@ -310,16 +306,16 @@ class OroloBot extends Bot
 			$this->createGoal();
 		}
 		$tile = $this->aStar->getNextStep($this->state->board->loadTile($this->state->board->hero->pos));
-		echo "current goal: \n" ;
-		echo ($this->currentGoal);
-		echo "\n current target: \n" ;
-		echo ($this->currentTarget);
-		echo "\n\n";
-		echo "current position: \n" ;
-		echo ($this->state->hero->pos);
-		echo "\n\n";
-		echo "Next step: \n";
-		echo ($tile);
+		//echo "current goal: \n" ;
+		//echo ($this->currentGoal);
+		//echo "\n current target: \n" ;
+		//echo ($this->currentTarget);
+		//echo "\n\n";
+		//echo "current position: \n" ;
+		//echo ($this->state->hero->pos);
+		//echo "\n\n";
+		//echo "Next step: \n";
+		//echo ($tile);
 		if ($tile == FALSE) {
 			$this->goalSetTurn = $this->state->turn;
 			$this->currentGoal = "Attack";
@@ -344,7 +340,7 @@ class OroloBot extends Bot
 		if ($dx == -1)
 			$dir = "East";
 
-		echo "\n".$dir ."\n";
+		//echo "\n".$dir ."\n";
 		return $dir;
 	}
 
@@ -354,7 +350,7 @@ class OroloBot extends Bot
 		$distance = AStar::trueDistance($heroTile, $this->findClosestTileType($this->state->hero->pos, Tile::TAVERN), $this->state);
 		$nearestEnemy = $this->findClosestTileType($heroTile, array(Tile::PLAYER));
 		$nearestTavern = $this->findClosestTileType($heroTile, array(Tile::TAVERN));
-		if ($this->state->turn > $this->healThresholdLastSet + 12) {
+		if ($this->state->turn > $this->healThresholdLastSet + $this->state->board->size*4) {
 			$healThreshold = (AStar::trueDistance($nearestTavern, $nearestEnemy, $this->state) < AStar::trueDistance($heroTile, $nearestTavern, $this->state) || AStar::trueDistance($heroTile, $nearestEnemy, $this->state) < AStar::trueDistance($heroTile, $nearestTavern, $this->state))? 50 : 21;
 			$this->healThreshold = $healThreshold;
 			$this->healThresholdLastSet = $this->state->turn;
@@ -376,7 +372,7 @@ class OroloBot extends Bot
 		if ($this->currentGoal == "Gold") {
 			$ownAllGold = FALSE;
 			$goldTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::GOLD_OWNED));
-			$goldCount = 0;
+			$goldCount = 1;
 			$myGoldCount = 0;
 			foreach ($goldTiles as $tile) {
 				if ($tile->owner != $this->state->hero->id) {
@@ -384,10 +380,10 @@ class OroloBot extends Bot
 					$myGoldCount++;
 				}
 				$goldCount++;
-				$ownAllGold = ($myGoldCount/$goldCount) > .63;
 			}
+			$ownAllGold = ($myGoldCount/$goldCount) > .63;
 			if ($ownAllGold) {
-				echo "OWN THE GOLD\n";
+				//echo "OWN THE GOLD\n";
 				$this->currentGoal = "Heal";
 				$this->currentTarget = $this->findGoalTarget();
 			}
@@ -399,7 +395,28 @@ class OroloBot extends Bot
 	public function findGoalTarget() {
 		$closestTile = $this->state->board->loadTile($this->state->hero->pos);
 		if ($this->currentGoal == "Gold") {
-			$closestTile = $this->findClosestTileType($this->state->board->loadTile($this->state->hero->pos), array(Tile::GOLD, Tile::GOLD_OWNED));
+			$goldTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::GOLD, Tile::GOLD_OWNED));
+			$tileWeight = array();
+			$enemyTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::PLAYER));
+			foreach ($goldTiles as $goldKey => $gold) {
+				$aStar = new AStar($this->state->board, $this->state->board->loadTile($this->state->hero->pos),$this->state->board->loadTile($gold));
+				if (count($aStar->path) == 0) {
+					//change it!
+					continue;
+				}
+				$tileWeight[$goldKey] = count($aStar->path);
+				foreach ($enemyTiles as $tile) {	
+					$dist = AStar::trueDistance($tile, $gold, $this->state);
+					if ($dist <= count($aStar->path))
+						$tileWeight[$goldKey] += 4;
+				}
+			}
+			$returnTiles = array();
+			foreach ($tileWeight as $key => $distance) {
+				$returnTiles[$key] = $goldTiles[$key];
+			}
+			$returnTiles[]=$this->state->board->loadTile($this->state->hero->pos);
+			$closestTile = reset($returnTiles);
 		} else if ($this->currentGoal == "Heal") {
 			$tavernTiles = $this->findTilesByDistance($this->state->board->loadTile($this->state->hero->pos), array(Tile::TAVERN));
 			$tavernTile = $this->findClosestTileType($this->state->board->loadTile($this->state->hero->pos), array(Tile::TAVERN));
@@ -414,7 +431,7 @@ class OroloBot extends Bot
 				foreach ($aStar->path as $tile) {
 					foreach ($this->state->board->getAdjacentTiles($tile) as $enemyAdjKey => $nearby) {
 						if ($nearby->type == Tile::PLAYER && $nearby->owner != $this->state->hero->id) {
-							$tileWeight[$tavernKey] += .4;
+							$tileWeight[$tavernKey] += $this->state->board->size;
 						}
 					}
 				}
@@ -600,7 +617,7 @@ class OroloBot extends Bot
 		$maxdir = "North";
 		$maxscore = -200;
 
-		print_r($maxdir);
+		//print_r($maxdir);
 		return $maxdir;
 	}
 
@@ -711,13 +728,13 @@ class Board
 		for ($y = 0; $y < $size; $y++) {
 			for ($x = 0; $x < $size; $x++) {
 				$str = substr($tiles,$y*$size*2+$x*2,2);
-				echo ($str);
+				//echo ($str);
 				if (!isset($this->tiles[$x])) {
 					$this->tiles[$x] = array();
 				}
 				$this->tiles[$x][$y] = Tile::createTileFromString($str,$x,$y);
 			}
-			echo "\n";
+			//echo "\n";
 		}
 	}
 
@@ -942,7 +959,7 @@ class Tile
 		} else if ($charString == "##"){
 			$type = self::OBSTACLE;
 		} else {
-			print_r("Couldn't parse . $charString\n"."passable is " . print_r($passable) );
+			//print_r("Couldn't parse . $charString\n"."passable is " . print_r($passable) );
 		}
 
 		return new Tile($type, $x, $y, $passable, $occupied, $owner);

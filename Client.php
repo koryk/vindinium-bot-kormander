@@ -35,9 +35,8 @@ class Client
 
     public function load()
     {
-        require('./OroloBot.php');
         require('./HttpPost.php');
-
+        require('./OroloBot.php');
         for ($i = 0; $i <= ($this->numberOfGames - 1); $i++) {
             $this->start(new OroloBot());
             echo "\nGame finished: " . ($i + 1) . "/" . $this->numberOfGames . "\n";
@@ -63,14 +62,10 @@ class Client
 
             // Move to some direction
             $url = $state['playUrl'];
-            $startTime = microtime(true);
             $direction = $botObject->move($state);
-	    echo "TURN TOOK " . (microtime(true)-$startTime)  . "SECONDS\n";
             $state = $this->move($url, $direction);
         }
         ob_end_clean();
-	echo "Game finished\n";
-	print_r($state);
     }
 
     private function getNewGameState()
@@ -78,7 +73,7 @@ class Client
         // Get a JSON from the server containing the current state of the game
         if ($this->mode == 'training') {
             // Don't pass the 'map' parameter if you want a random map
-            $params = array('key' => $this->key, 'turns' => $this->numberOfTurns);
+            $params = array('key' => $this->key, 'turns' => $this->numberOfTurns, 'map' => 'm1');
             $api_endpoint = '/api/training';
         } elseif ($this->mode == 'arena') {
             $params = array('key' => $this->key);
@@ -88,7 +83,12 @@ class Client
         // Wait for 10 minutes
         $r = HttpPost::post($this->serverUrl . $api_endpoint, $params, 10 * 60);
 
-            return json_decode($r, true);
+        if (isset($r['headers']['status_code']) && $r['headers']['status_code'] == 200) {
+            return json_decode($r['content'], true);
+        } else {
+            echo "Error when creating the game\n";
+            echo $r['content'];
+        }
     }
 
     private function move($url, $direction)
@@ -99,11 +99,13 @@ class Client
          */
 
         try {
-            $startTime = microtime(true);
             $r = HttpPost::post($url, array('dir' => $direction), self::TIMEOUT);
-	    echo "SENDING TOOK " . (microtime(true)-$startTime)  . "SECONDS\n";
-
-                return json_decode($r, true);
+            if (isset($r['headers']['status_code']) && $r['headers']['status_code'] == 200) {
+                return json_decode($r['content'], true);
+            } else {
+                echo "Error HTTP " . $r['headers']['status_code'] . "\n" . $r['content'] . "\n";
+                return array('game' => array('finished' => true));
+            }
         } catch (\Exception $e) {
             echo $e->getMessage() . "\n";
             return array('game' => array('finished' => true));
@@ -112,9 +114,6 @@ class Client
 
     private function isFinished($state)
     {
-        $finished = $state['game']['finished'];
-	if($finished)
-		print_r("\n Game Finished \n" . print_r($state, TRUE));
-	return $finished;
+        return $state['game']['finished'];
     }
 }

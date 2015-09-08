@@ -42,7 +42,12 @@ class AStar
 			unset($this->openSet[$currentIndex]);
 			$this->closedSet[$currentIndex] = $current;
 
+try {
+throw new Exception();
 			$neighborNodes = $this->board->getAdjacentTiles($current);
+} catch (Exception $e) {
+	print_r($e->getTrace());
+}
 			foreach ($neighborNodes as $neighbor) {
 				$neighborIndex = self::getKeyFromPos($neighbor);
 				if (isset($closedSet[$neighborIndex])) {
